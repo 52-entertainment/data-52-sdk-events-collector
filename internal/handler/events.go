@@ -33,20 +33,20 @@ type eventsRequest struct {
 }
 
 type event struct {
-	EventID    string                 `json:"event_id"`
-	EventName  string                 `json:"event_name"`
-	ClientTime string                 `json:"client_time,omitempty"`
-	DeviceID   string                 `json:"device_id,omitempty"`
-	UserID     string                 `json:"user_id,omitempty"`
-	Properties map[string]any         `json:"properties,omitempty"`
-	Meta       map[string]any         `json:"meta,omitempty"`
+	EventID    string         `json:"event_id"`
+	EventName  string         `json:"event_name"`
+	ClientTime string         `json:"client_time,omitempty"`
+	DeviceID   string         `json:"device_id,omitempty"`
+	UserID     string         `json:"user_id,omitempty"`
+	Properties map[string]any `json:"properties,omitempty"`
+	Meta       map[string]any `json:"meta,omitempty"`
 }
 
 type ingestEnvelope struct {
-	AppID      string   `json:"app_id"`
-	ReceivedAt string   `json:"received_at"`
-	RequestID  string   `json:"request_id"`
-	Events     []event  `json:"events"`
+	AppID      string  `json:"app_id"`
+	ReceivedAt string  `json:"received_at"`
+	RequestID  string  `json:"request_id"`
+	Events     []event `json:"events"`
 }
 
 type eventsResponse struct {
@@ -74,7 +74,14 @@ func (h *eventsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	if !h.deps.Authenticator.Validate(appID, writeKey) {
+	ok, err := h.deps.Authenticator.Validate(r.Context(), appID, writeKey)
+	if err != nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{
+			"error": "auth_backend_unavailable",
+		})
+		return
+	}
+	if !ok {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{
 			"error": "invalid_credentials",
 		})

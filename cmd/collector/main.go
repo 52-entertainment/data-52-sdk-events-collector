@@ -12,6 +12,7 @@ import (
 
 	"github.com/52-entertainment/52-sdk-event-collector/internal/auth"
 	"github.com/52-entertainment/52-sdk-event-collector/internal/config"
+	firestorestore "github.com/52-entertainment/52-sdk-event-collector/internal/firestore"
 	"github.com/52-entertainment/52-sdk-event-collector/internal/handler"
 	"github.com/52-entertainment/52-sdk-event-collector/internal/pubsub"
 )
@@ -24,10 +25,16 @@ func main() {
 
 	ctx := context.Background()
 
-	authenticator, err := auth.NewStaticAuthenticator(cfg.AppKeysJSON)
+	store, err := firestorestore.NewStore(ctx, cfg.GCPProjectID, firestorestore.Config{
+		AppsCollection: cfg.FirestoreAppsCollection,
+		DatabaseID:     cfg.FirestoreDatabaseID,
+	})
 	if err != nil {
-		log.Fatalf("auth init error: %v", err)
+		log.Fatalf("firestore init error: %v", err)
 	}
+	defer store.Close()
+
+	authenticator := auth.NewStoreAuthenticator(store.Apps())
 
 	publisher, err := pubsub.NewPublisher(ctx, cfg.GCPProjectID, cfg.PubSubTopic)
 	if err != nil {
